@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum SourceType {
+  manual_import
+  browser_collect
+  official_api
+}
+
+enum AnalysisSource {
+  human
+  kimi
+}
+
+enum AnalysisStatus {
+  completed
+  partial
+  missing
+}
+
+enum ImportBatchStatus {
+  uploaded
+  preview_ready
+  committed
+  failed
+}
+
+enum ImportItemStatus {
+  valid
+  warning
+  duplicate
+  error
+  imported
+  skipped
+}
+
+model Brand {
+  id            String          @id @default(cuid())
+  slug          String          @unique
+  displayName   String
+  aliasesJson   String
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  accounts      SocialAccount[]
+  posts         Post[]
+  importItems   ImportBatchItem[]
+}
+
+model Platform {
+  id            String          @id @default(cuid())
+  slug          String          @unique
+  displayName   String
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  accounts      SocialAccount[]
+  posts         Post[]
+  importBatches ImportBatch[]
+}
+
+model SocialAccount {
+  id          String   @id @default(cuid())
+  brandId     String
+  platformId  String
+  handle      String
+  profileUrl  String?
+  isActive    Boolean  @default(true)
+  crawlEnabled Boolean @default(false)
+  displayOrder Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  brand       Brand    @relation(fields: [brandId], references: [id])
+  platform    Platform @relation(fields: [platformId], references: [id])
+  posts       Post[]
+
+  @@unique([platformId, handle])
+}
+
+model ImportBatch {
+  id             String            @id @default(cuid())
+  platformId     String
+  sourceFileName String
+  sourceFileHash String
+  status         ImportBatchStatus @default(uploaded)
+  totalRows      Int               @default(0)
+  successCount   Int               @default(0)
+  warningCount   Int               @default(0)
+  failedCount    Int               @default(0)
+  duplicateCount Int               @default(0)
+  committedAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  platform       Platform          @relation(fields: [platformId], references: [id])
+  items          ImportBatchItem[]
+  posts          Post[]
+}
+
+model ImportBatchItem {
+  id                 String           @id @default(cuid())
+  importBatchId      String
+  sheetName          String
+  sourceRowNumber    Int
+  brandId            String?
+  status             ImportItemStatus
+  rawDataJson        String
+  normalizedDataJson String
+  warningsJson       String
+  errorsJson         String
+  duplicatePostId    String?
+  createdPostId      String?
+  createdCaseId      String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  importBatch        ImportBatch      @relation(fields: [importBatchId], references: [id])
+  brand              Brand?           @relation(fields: [brandId], references: [id])
+}
+
+model Post {
+  id                String       @id @default(cuid())
+  platformId        String
+  brandId           String
+  socialAccountId   String?
+  sourceType        SourceType   @default(manual_import)
+  sourceRecordId    String
+  importBatchId     String?
+  externalPostId    String?
+  canonicalUrl      String?
+  sourceUrl         String?
+  postTypeLabel     String?
+  captionRaw        String
+  captionNormalized String
+  publishDate       DateTime?
+  likesCount        Int?
+  likesRaw          String?
+  likesCapturedAt   DateTime?
+  coverImageUrl     String?
+  dataStatus        String       @default("partial")
+  reviewStatus      String       @default("imported")
+  contentFingerprint String
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  platform          Platform     @relation(fields: [platformId], references: [id])
+  brand             Brand        @relation(fields: [brandId], references: [id])
+  socialAccount     SocialAccount? @relation(fields: [socialAccountId], references: [id])
+  importBatch       ImportBatch? @relation(fields: [importBatchId], references: [id])
+  case              Case?
+
+  @@unique([platformId, externalPostId])
+  @@unique([canonicalUrl])
+  @@index([platformId, brandId])
+  @@index([contentFingerprint])
+}
+
+model Case {
+  id        String         @id @default(cuid())
+  postId    String         @unique
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  post      Post           @relation(fields: [postId], references: [id])
+  analyses  CaseAnalysis[]
+}
+
+model CaseAnalysis {
+  id                    String         @id @default(cuid())
+  caseId                String
+  source                AnalysisSource
+  status                AnalysisStatus
+  version               Int            @default(1)
+  postStructureAnalysis String?
+  postContentAnalysis   String?
+  visualDesignAnalysis  String?
+  importedExtraAnalysis String?
+  visualReferenceNote   String?
+  rawAnalysisJson       String
+  isHumanConfirmed      Boolean        @default(false)
+  analyzedBy            String?
+  analyzedAt            DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  case                  Case           @relation(fields: [caseId], references: [id])
+
+  @@unique([caseId, source, version])
+}

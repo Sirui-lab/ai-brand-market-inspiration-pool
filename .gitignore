@@ -1,0 +1,13 @@
+node_modules
+.next
+.env
+.env.local
+*.db
+!prisma/.gitkeep
+uploads
+*.log
+tsconfig.tsbuildinfo
+work
+outputs
+public/media-cache/*
+!public/media-cache/.gitkeep

@@ -1,0 +1,36 @@
+{
+  "name": "ai-brand-market-inspiration-pool",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "node scripts/prepare-production-storage.mjs && next start -H 0.0.0.0 -p ${PORT:-3000}",
+    "lint": "next lint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "db:init-sqlite": "python3 scripts/init_sqlite.py",
+    "phase0:inspect": "tsx scripts/inspect-workbook.ts",
+    "phase0:smoke": "tsx scripts/phase0-smoke.ts",
+    "phase1:linkedin-smoke": "tsx scripts/phase1-linkedin-smoke.ts",
+    "phase1:linkedin-recent-smoke": "tsx scripts/phase1-linkedin-recent-smoke.ts",
+    "backfill:post-media": "tsx scripts/backfill-post-media.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "6.14.0",
+    "next": "15.4.6",
+    "prisma": "6.14.0",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "undici": "^8.7.0",
+    "xlsx": "^0.18.5",
+    "zod": "^4.0.17"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2"
+  }
+}
